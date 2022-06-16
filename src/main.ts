@@ -1,11 +1,36 @@
-import { App, Stack, StackProps } from 'aws-cdk-lib';
+import { App, CfnParameter, Stack, StackProps } from 'aws-cdk-lib';
+import { LoggingLevel, SlackChannelConfiguration } from 'aws-cdk-lib/aws-chatbot';
+import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
+import { Topic } from 'aws-cdk-lib/aws-sns';
 import { Construct } from 'constructs';
 
 export class MyStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps = {}) {
     super(scope, id, props);
 
-    // define resources here...
+    const topic = new Topic(this, 'CDKDeployTopic', {
+      topicName: 'cdk-deploying-stacks',
+    });
+
+    const slackWorkspaceId = new CfnParameter(this, 'SlackWorkspaceId', {
+      type: 'String',
+      description: 'Enter slack workspace id',
+    });
+    const slackChannelId = new CfnParameter(this, 'SlackChannelId', {
+      type: 'String',
+      description: 'Enter slack channel id',
+    });
+
+    const slack = new SlackChannelConfiguration(this, 'MySlack', {
+      slackChannelConfigurationName: 'cdk-deploying-stacks',
+      slackWorkspaceId: slackWorkspaceId.valueAsString,
+      slackChannelId: slackChannelId.valueAsString,
+      notificationTopics: [topic],
+      loggingLevel: LoggingLevel.INFO,
+    });
+    slack.role?.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('ReadOnlyAccess'),
+    );
   }
 }
 
